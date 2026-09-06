@@ -272,4 +272,4 @@ For support and questions, please open an issue in the GitHub repository or cont
 
 ---
 
-**Built with ❤️ for academic excellence and collaborative learning**
+
