@@ -41,7 +41,7 @@ router.post(
       res.json(task);
     } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server Error');
+      res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
     }
   }
 );
@@ -55,7 +55,7 @@ router.get('/project/:projectId', auth, async (req, res) => {
     res.json(tasks);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -85,7 +85,7 @@ router.put('/:id/assign', auth, async (req, res) => {
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -107,7 +107,7 @@ router.put('/:id/status', auth, async (req, res) => {
     res.json(task);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -129,7 +129,7 @@ router.put('/:id/submit', auth, async (req, res) => {
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -176,7 +176,7 @@ router.post('/:id/ai-assign', auth, async (req, res) => {
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 

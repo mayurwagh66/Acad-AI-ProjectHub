@@ -32,7 +32,7 @@ router.post(
       res.json(project);
     } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server Error');
+      res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
     }
   }
 );
@@ -70,7 +70,7 @@ router.post(
       res.json({ msg: 'Successfully joined project', project });
     } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server Error');
+      res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
     }
   }
 );
@@ -123,7 +123,7 @@ router.get('/:id', auth, async (req, res) => {
     if (err.kind === 'ObjectId') {
       return res.status(404).json({ msg: 'Project not found' });
     }
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -191,7 +191,7 @@ router.put('/:id', auth, async (req, res) => {
     if (err.kind === 'ObjectId') {
       return res.status(404).json({ msg: 'Project not found' });
     }
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -219,7 +219,7 @@ router.delete('/:id', auth, async (req, res) => {
     if (err.kind === 'ObjectId') {
       return res.status(404).json({ msg: 'Project not found' });
     }
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -322,7 +322,7 @@ router.post('/ai-plan', auth, async (req, res) => {
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -353,7 +353,7 @@ router.put('/approve-plan/:projectId', auth, async (req, res) => {
 
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Server Error');
+        res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
     }
 });
 
@@ -385,7 +385,7 @@ router.put('/reject-plan/:projectId', auth, async (req, res) => {
 
     } catch (err) {
         console.error(err.message);
-        res.status(500).send('Server Error');
+        res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
     }
 });
 
@@ -413,7 +413,7 @@ router.put('/evaluate/:projectId', auth, async (req, res) => {
     res.json({ msg: 'Project evaluated successfully!', project });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -447,7 +447,7 @@ router.put('/assign-faculty/:projectId', auth, async (req, res) => {
     res.json({ msg: 'Faculty assigned to project', project: populated });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -480,7 +480,7 @@ router.post('/:projectId/faculty-suggestions', auth, async (req, res) => {
     res.json({ msg: 'Suggestion added', suggestions: populated.facultySuggestions });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -502,7 +502,7 @@ router.get('/:projectId/faculty-suggestions', auth, async (req, res) => {
     res.json({ suggestions: project.facultySuggestions || [] });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 

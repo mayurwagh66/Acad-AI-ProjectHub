@@ -81,7 +81,7 @@ router.get('/faculty/:projectId', auth, async (req, res) => {
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -162,7 +162,7 @@ router.get('/faculty/:projectId/:studentId', auth, async (req, res) => {
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 

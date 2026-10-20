@@ -183,19 +183,14 @@ router.get('/:projectId', auth, async (req, res) => {
 
     html += `</tbody></table></div>`;
 
-    pdf.create(html).toStream((err, stream) => {
-      if (err) {
-        console.error(err.message);
-        return res.status(500).send('Error generating PDF');
-      }
-      res.setHeader('Content-type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=report-${project.name}.pdf`);
-      stream.pipe(res);
-    });
+    // Return the HTML directly so the frontend can display/print it natively
+    // html-pdf uses phantomjs which crashes in Vercel serverless environments
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 

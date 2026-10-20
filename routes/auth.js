@@ -30,7 +30,12 @@ router.post(
     try {
       let user = await User.findOne({ email });
       if (user) {
-        return res.status(400).json({ msg: 'User already exists' });
+        return res.status(400).json({ msg: 'Email is already registered' });
+      }
+
+      let existingUsername = await User.findOne({ username });
+      if (existingUsername) {
+        return res.status(400).json({ msg: 'Username is already taken' });
       }
 
       user = new User({
@@ -46,6 +51,7 @@ router.post(
         user: {
           id: user.id,
           role: user.role,
+          username: user.username,
         },
       };
 
@@ -60,7 +66,7 @@ router.post(
       );
     } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server error');
+      res.status(500).json({ msg: 'Server error', error: err.message });
     }
   }
 );
@@ -97,6 +103,7 @@ router.post(
         user: {
           id: user.id,
           role: user.role,
+          username: user.username,
         },
       };
 
@@ -111,7 +118,7 @@ router.post(
       );
     } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server error');
+      res.status(500).json({ msg: 'Server error', error: err.message });
     }
   }
 );

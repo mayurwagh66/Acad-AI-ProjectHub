@@ -4,18 +4,59 @@ const auth = require('../middleware/auth');
 const File = require('../models/File');
 const path = require('path');
 const fs = require('fs');
+const nextcloud = require('../utils/nextcloud');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Ensure upload directory exists
+// Ensure local upload directory exists
 const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+/**
+ * Helper to upload file to storage (Nextcloud or Local)
+ */
+async function processFileUpload({ uploadedFile, projectId, taskId, userId }) {
+  const localFilePath = path.join(uploadDir, `${Date.now()}_${uploadedFile.name}`);
+  await uploadedFile.mv(localFilePath);
+
+  let storageProvider = 'local';
+  let nextcloudPath = null;
+  let nextcloudUrl = null;
+
+  // Nextcloud upload if configured
+  if (nextcloud.isConfigured()) {
+    try {
+      const buffer = fs.readFileSync(localFilePath);
+      const ncResult = await nextcloud.uploadFile(buffer, uploadedFile.name, projectId, uploadedFile.mimetype);
+      storageProvider = 'nextcloud';
+      nextcloudPath = ncResult.remotePath;
+      nextcloudUrl = ncResult.url;
+      console.log(`[Files] Successfully stored on Nextcloud: ${nextcloudPath}`);
+    } catch (ncErr) {
+      console.error('[Files] Nextcloud upload failed, using local disk fallback:', ncErr.message);
+    }
+  }
+
+  const newFile = new File({
+    project: projectId,
+    task: taskId || null,
+    fileName: uploadedFile.name,
+    filePath: localFilePath,
+    fileType: uploadedFile.mimetype,
+    uploadedBy: userId,
+    storageProvider,
+    nextcloudPath,
+    nextcloudUrl,
+  });
+
+  return await newFile.save();
 }
 
 // @route   POST api/files/upload/:projectId
-// @desc    Upload a file for a project
+// @desc    Upload a file for a project (stored on Nextcloud if configured)
 // @access  Private
 router.post('/upload/:projectId', auth, async (req, res) => {
   try {
@@ -26,25 +67,17 @@ router.post('/upload/:projectId', auth, async (req, res) => {
     const { projectId } = req.params;
     const uploadedFile = req.files.file;
 
-    const filePath = path.join(uploadDir, uploadedFile.name);
-
-    await uploadedFile.mv(filePath);
-
-    const newFile = new File({
-      project: projectId,
-      task: null,
-      fileName: uploadedFile.name,
-      filePath: filePath,
-      fileType: uploadedFile.mimetype,
-      uploadedBy: req.user.id,
+    const savedFile = await processFileUpload({
+      uploadedFile,
+      projectId,
+      taskId: null,
+      userId: req.user.id,
     });
 
-    const file = await newFile.save();
-    res.json(file);
-
+    res.json(savedFile);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Error uploading file:', err.message);
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -60,25 +93,17 @@ router.post('/upload/:projectId/:taskId', auth, async (req, res) => {
     const { projectId, taskId } = req.params;
     const uploadedFile = req.files.file;
 
-    const filePath = path.join(uploadDir, uploadedFile.name);
-
-    await uploadedFile.mv(filePath);
-
-    const newFile = new File({
-      project: projectId,
-      task: taskId,
-      fileName: uploadedFile.name,
-      filePath: filePath,
-      fileType: uploadedFile.mimetype,
-      uploadedBy: req.user.id,
+    const savedFile = await processFileUpload({
+      uploadedFile,
+      projectId,
+      taskId,
+      userId: req.user.id,
     });
 
-    const file = await newFile.save();
-    res.json(file);
-
+    res.json(savedFile);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Error uploading file:', err.message);
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -91,7 +116,44 @@ router.get('/project/:projectId', auth, async (req, res) => {
     res.json(files);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
+  }
+});
+
+// @route   GET api/files/download/:fileId
+// @desc    Download a file from Nextcloud or local disk
+// @access  Private
+router.get('/download/:fileId', auth, async (req, res) => {
+  try {
+    const file = await File.findById(req.params.fileId);
+    if (!file) {
+      return res.status(404).json({ msg: 'File not found' });
+    }
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.fileName)}"`);
+    if (file.fileType) {
+      res.setHeader('Content-Type', file.fileType);
+    }
+
+    // Attempt Nextcloud download first if stored on Nextcloud
+    if (file.storageProvider === 'nextcloud' && file.nextcloudPath && nextcloud.isConfigured()) {
+      try {
+        const fileBuffer = await nextcloud.downloadFile(file.nextcloudPath);
+        return res.send(fileBuffer);
+      } catch (ncErr) {
+        console.error('[Files] Error downloading from Nextcloud, trying local fallback:', ncErr.message);
+      }
+    }
+
+    // Local disk fallback
+    if (file.filePath && fs.existsSync(file.filePath)) {
+      return res.sendFile(path.resolve(file.filePath));
+    }
+
+    return res.status(404).json({ msg: 'File content not found on server or Nextcloud' });
+  } catch (err) {
+    console.error('Error downloading file:', err.message);
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -106,8 +168,6 @@ router.post('/:fileId/ai-organise', auth, async (req, res) => {
       return res.status(404).json({ msg: 'File not found' });
     }
 
-    // In a real application, you might read a snippet of the file content
-    // For this example, we'll use the filename and type as context for AI.
     const prompt = `Given a file named "${file.fileName}" of type "${file.fileType}", suggest 3-5 relevant tags or categories. Format the output as a JSON array of strings. For example: ["report", "finance", "Q3"].`;
 
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
@@ -131,12 +191,12 @@ router.post('/:fileId/ai-organise', auth, async (req, res) => {
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
 // @route   DELETE api/files/:fileId
-// @desc    Delete a file by ID (DB and disk)
+// @desc    Delete a file by ID (DB, Nextcloud, and disk)
 // @access  Private
 router.delete('/:fileId', auth, async (req, res) => {
   try {
@@ -146,21 +206,25 @@ router.delete('/:fileId', auth, async (req, res) => {
       return res.status(404).json({ msg: 'File not found' });
     }
 
-    // Delete physical file if it exists
+    // Delete from Nextcloud if applicable
+    if (file.nextcloudPath && nextcloud.isConfigured()) {
+      await nextcloud.deleteFile(file.nextcloudPath);
+    }
+
+    // Delete physical file locally if it exists
     try {
       if (file.filePath && fs.existsSync(file.filePath)) {
         fs.unlinkSync(file.filePath);
       }
     } catch (fsErr) {
       console.warn('Failed to remove file from disk:', fsErr.message);
-      // proceed to remove DB record regardless
     }
 
     await file.deleteOne();
     return res.json({ msg: 'File deleted successfully' });
   } catch (err) {
     console.error(err.message);
-    return res.status(500).send('Server Error');
+    return res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 

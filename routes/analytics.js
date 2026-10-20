@@ -98,7 +98,7 @@ router.get('/productivity', auth, async (req, res) => {
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 
@@ -154,7 +154,7 @@ router.get('/productivity/:projectId', auth, async (req, res) => {
 
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 

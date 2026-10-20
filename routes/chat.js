@@ -41,10 +41,16 @@ router.post(
       // Populate sender details for the response
       await chatMessage.populate('sender', 'username');
 
+      // Broadcast the new message via Socket.io
+      const io = req.app.get('io');
+      if (io) {
+        io.to(req.params.projectId).emit('new_message', chatMessage);
+      }
+
       res.json(chatMessage);
     } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server Error');
+      res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
     }
   }
 );
@@ -74,7 +80,7 @@ router.get('/projects/:projectId', auth, async (req, res) => {
     res.json(chatMessages);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server Error');
+    res.status(500).json({ msg: 'Server Error', error: err ? err.message : 'Unknown error' });
   }
 });
 

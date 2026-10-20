@@ -1,6 +1,26 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const API_URL = 'http://localhost:5000/api';
+    const API_URL = '/api';
     let currentProject = null;
+    let socket = null;
+    if (typeof io !== 'undefined') {
+        socket = io();
+        socket.on('new_message', (message) => {
+            if (currentProject && currentProject._id === message.project) {
+                const chatMessagesContainer = document.getElementById('chat-messages-container');
+                const systemMessage = chatMessagesContainer.querySelector('.system-message');
+                if (systemMessage) systemMessage.remove();
+
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('chat-message');
+                messageElement.innerHTML = `
+                    <strong>${message.sender.username}:</strong> ${message.message}
+                    <span class="chat-timestamp">${new Date(message.timestamp).toLocaleString()}</span>
+                `;
+                chatMessagesContainer.appendChild(messageElement);
+                chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            }
+        });
+    }
     var charts = {};
 
     // --- Consolidated DOM Elements --- //
@@ -14,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const navUploadFiles = document.getElementById('nav-upload-files');
     const navSeeSuggestions = document.getElementById('nav-see-suggestions');
     const navSmartReminders = document.getElementById('nav-smart-reminders');
-        const navProfile = document.getElementById('nav-profile');
+    const navProfile = document.getElementById('nav-profile');
     const navLogin = document.getElementById('nav-login');
     const navRegister = document.getElementById('nav-register');
     const navLogout = document.getElementById('nav-logout');
@@ -49,18 +69,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const facultyProjectIdInput = document.getElementById('faculty-project-id');
     const submitFacultyAddProjectBtn = document.getElementById('submit-faculty-add-project-btn');
     const facultyAddProjectError = document.getElementById('faculty-add-project-error');
-    
+
     // Dashboard Elements
     const studentDashboard = document.getElementById('student-dashboard');
     const facultyDashboard = document.getElementById('faculty-dashboard');
-    
+
     // Faculty Dashboard Elements
     const facultyProjectsUl = document.getElementById('faculty-projects-ul');
     const facultyTotalProjects = document.getElementById('faculty-total-projects');
     const facultyActiveProjects = document.getElementById('faculty-active-projects');
     const facultyCompletedProjects = document.getElementById('faculty-completed-projects');
     const facultyPendingProjects = document.getElementById('faculty-pending-projects');
-    
+
     // Student Dashboard Elements (removed metrics elements)
 
     // Faculty Evaluation Dashboard Widget
@@ -148,8 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatMessageInput = document.getElementById('chat-message-input');
     const sendMessageBtn = document.getElementById('send-message-btn');
     const chatInputForm = document.getElementById('chat-input-form');
-    let chatPollingInterval; // To store the interval ID for chat polling
-
+    
     // Buttons within Project Details View
     const aiPlanProjectBtn = document.getElementById('ai-plan-project-btn');
     const viewProductivityBtn = document.getElementById('view-productivity-btn');
@@ -227,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
             projectHealthPanel.style.display = 'block';
             const makeDonut = (ctx, value, label, color, mode) => {
                 if (!ctx) return;
-                const pct = mode==='pct' ? Math.round(value) : (total>0 ? Math.round((value/total)*100) : 0);
+                const pct = mode === 'pct' ? Math.round(value) : (total > 0 ? Math.round((value / total) * 100) : 0);
                 // Ensure consistent sizing
                 ctx.width = 160; ctx.height = 160;
                 if (charts[ctx.id]) charts[ctx.id].destroy();
@@ -238,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         responsive: false,
                         cutout: '68%',
                         layout: { padding: 6 },
-                        plugins: { legend: { display:false }, tooltip: { enabled: true } }
+                        plugins: { legend: { display: false }, tooltip: { enabled: true } }
                     }
                 });
                 const card = ctx.parentElement;
@@ -272,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     labelEl.style.fontSize = '12px';
                     card.appendChild(labelEl);
                 }
-                labelEl.textContent = label + (mode==='count' ? ` (${value})` : '');
+                labelEl.textContent = label + (mode === 'count' ? ` (${value})` : '');
             };
             makeDonut(ctxs.completion, completionRate, 'Completion Rate', '#3f51b5', 'pct');
             makeDonut(ctxs.completed, counts.completed, 'Completed', '#43a047', 'count');
@@ -341,10 +360,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const showView = (viewId) => {
         // Clear chat polling when changing view
-        if (chatPollingInterval) {
-            clearInterval(chatPollingInterval);
-            chatPollingInterval = null;
-        }
+        
 
         document.querySelectorAll('.content-view').forEach(view => {
             view.style.display = 'none';
@@ -664,7 +680,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             if (res.ok) {
                 welcomeMessage.textContent = `${data.msg}, ${getUsername()}!`;
-                
+
                 if (getUserRole() === 'student') {
                     displayStudentDashboard(data);
                 } else if (getUserRole() === 'faculty') {
@@ -687,7 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Expose functions needed by inline handlers (safe wrappers)
     window.fetchProjectDetails = async (projectId) => {
-        try { await fetchProjectDetails(projectId); } catch (_) {}
+        try { await fetchProjectDetails(projectId); } catch (_) { }
     };
     window.generateReport = async (projectId) => {
         try {
@@ -729,14 +745,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function createStudentProjectItem(project) {
         const li = document.createElement('li');
         li.className = 'student-project-item';
-        
-        const statusClass = project.status === 'in-progress' ? 'in-progress' : 
-                           project.status === 'completed' ? 'completed' : 'pending';
-        
+
+        const statusClass = project.status === 'in-progress' ? 'in-progress' :
+            project.status === 'completed' ? 'completed' : 'pending';
+
         const teamMembers = project.members ? project.members.map(m => m.user?.username || 'Unknown').join(', ') : 'No members';
         const ownerName = project.owner?.username || 'Unknown';
         const isOwner = project.owner?._id === localStorage.getItem('userId');
-        
+
         li.innerHTML = `
             <div class="student-project-header">
                 <h4 class="student-project-title">${project.name}</h4>
@@ -775,14 +791,14 @@ document.addEventListener('DOMContentLoaded', () => {
             navigator.clipboard.writeText(project._id);
             alert('Project ID copied to clipboard!');
         });
-        
+
         return li;
     }
 
     // --- Display Faculty Dashboard --- //
     function displayFacultyDashboard(data) {
         console.log('Faculty dashboard data:', data);
-        
+
         // Update metrics
         if (facultyTotalProjects) facultyTotalProjects.textContent = data.metrics?.totalAssigned || 0;
         if (facultyActiveProjects) facultyActiveProjects.textContent = data.metrics?.active || 0;
@@ -808,13 +824,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function createFacultyProjectItem(project) {
         const li = document.createElement('li');
         li.className = 'faculty-project-item';
-        
-        const statusClass = project.status === 'in-progress' ? 'in-progress' : 
-                           project.status === 'completed' ? 'completed' : 'pending';
-        
+
+        const statusClass = project.status === 'in-progress' ? 'in-progress' :
+            project.status === 'completed' ? 'completed' : 'pending';
+
         const teamMembers = project.members ? project.members.map(m => m.user?.username || 'Unknown').join(', ') : 'No members';
         const ownerName = project.owner?.username || 'Unknown';
-        
+
         li.innerHTML = `
             <div class="faculty-project-header">
                 <h4 class="faculty-project-title">${project.name}</h4>
@@ -848,7 +864,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const reportBtn = li.querySelector('.js-generate-report');
         if (viewBtn) viewBtn.addEventListener('click', () => window.fetchProjectDetails(project._id));
         if (reportBtn) reportBtn.addEventListener('click', () => window.generateReport(project._id));
-        
+
         return li;
     }
 
@@ -883,7 +899,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const copyBtn = e.target.closest('[data-copy-id]');
         if (copyBtn) {
             const id = copyBtn.getAttribute('data-copy-id');
-            try { await navigator.clipboard.writeText(id); } catch (_) {}
+            try { await navigator.clipboard.writeText(id); } catch (_) { }
             copyBtn.innerHTML = '<span class="material-icons">check</span>Copied';
             setTimeout(() => { copyBtn.innerHTML = '<span class="material-icons">content_copy</span>Copy'; }, 1200);
             return;
@@ -912,10 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!token) return;
 
         // Clear any existing chat polling when loading a new project
-        if (chatPollingInterval) {
-            clearInterval(chatPollingInterval);
-            chatPollingInterval = null;
-        }
+        
 
         try {
             // Fetch a single project by ID to get populated member details
@@ -999,9 +1012,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     project.files.forEach(file => {
                         const li = document.createElement('li');
                         const uploadedByUsername = file.uploadedBy && file.uploadedBy.username ? file.uploadedBy.username : 'Unknown';
-                        const downloadHref = `${window.location.origin}/uploads/${encodeURIComponent(file.fileName)}`;
+                        const downloadHref = file._id ? `${API_URL}/files/download/${file._id}` : `${window.location.origin}/uploads/${encodeURIComponent(file.fileName)}`;
+                        const badge = file.storageProvider === 'nextcloud' ? '<span class="badge nextcloud-badge" style="background:linear-gradient(135deg, #0082c9, #005689);color:#fff;font-size:0.7rem;padding:2px 8px;border-radius:4px;margin-left:6px;font-weight:600;">☁️ Nextcloud</span>' : '';
                         li.innerHTML = `
-                            <span>${file.fileName} (v${file.version}) - Uploaded by: ${uploadedByUsername} on ${new Date(file.uploadDate).toLocaleDateString()}</span>
+                            <span>${file.fileName} (v${file.version})${badge} - Uploaded by: ${uploadedByUsername} on ${new Date(file.uploadDate).toLocaleDateString()}</span>
                             <div>
                                 <a href="${downloadHref}" class="btn flat-btn" download><span class="material-icons">download</span>Download</a>
                                 <button data-file-id="${file._id}" class="btn flat-btn delete-file-btn"><span class="material-icons">delete</span>Delete</button>
@@ -1070,7 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Chat: only for non-faculty roles to avoid 401 spam and flicker
                 if (getUserRole() !== 'faculty') {
                     await fetchAndDisplayChatMessages(projectId);
-                    chatPollingInterval = setInterval(() => fetchAndDisplayChatMessages(projectId), 3000);
+                    
                 }
 
                 // UI visibility based on roles and project status
@@ -1113,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Complete Project button: owner or team leader can complete
                 let currentUserId = null;
-                try { currentUserId = JSON.parse(atob(getAuthToken().split('.')[1])).user.id; } catch (_) {}
+                try { currentUserId = JSON.parse(atob(getAuthToken().split('.')[1])).user.id; } catch (_) { }
                 const isOwner = project.owner && project.owner._id && currentUserId ? (project.owner._id.toString() === currentUserId) : false;
                 const isTeamLeaderMember = Array.isArray(project.members) && currentUserId
                     ? project.members.some(m => m && m.role === 'team_leader' && m.user && (m.user._id || m.user.id) && (m.user._id?.toString?.() === currentUserId || m.user.id === currentUserId))
@@ -1135,7 +1149,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (userRole === 'faculty') {
                     facultySuggestionCompose.style.display = 'block';
                     // Optionally auto-assign faculty when opened
-                    try { await fetch(`${API_URL}/projects/assign-faculty/${projectId}`, { method: 'PUT', headers: { 'x-auth-token': token } }); } catch (_) {}
+                    try { await fetch(`${API_URL}/projects/assign-faculty/${projectId}`, { method: 'PUT', headers: { 'x-auth-token': token } }); } catch (_) { }
                 } else {
                     facultySuggestionCompose.style.display = 'none';
                 }
@@ -1212,7 +1226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             arr.forEach(task => {
                 const li = document.createElement('li');
                 const assigned = task.assignedTo && (task.assignedTo.username || task.assignedTo.email) ? (task.assignedTo.username || task.assignedTo.email) : 'Unassigned';
-                li.className = `task-item task-${(task.status||'pending').toLowerCase().replace(' ', '-')}`;
+                li.className = `task-item task-${(task.status || 'pending').toLowerCase().replace(' ', '-')}`;
                 li.innerHTML = `
                     <span>${task.name} - Status: ${task.status || 'pending'} - Due: ${task.dueDate ? new Date(task.dueDate).toDateString() : 'N/A'} <em>(Assigned: ${assigned})</em></span>
                     <div>
@@ -1726,15 +1740,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(msg || 'Failed to generate report');
                 return;
             }
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `report-${currentProject.name || 'project'}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('application/pdf')) {
+                // Fallback for PDF binary
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `report-${currentProject.name || 'project'}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } else {
+                // Received HTML (Vercel Serverless solution)
+                const htmlContent = await res.text();
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(htmlContent);
+                printWindow.document.close();
+                // Wait for any images/scripts to layout before printing
+                printWindow.onload = () => {
+                    printWindow.print();
+                };
+            }
         } catch (err) {
             console.error('Report download error', err);
             alert('Server error generating report');
@@ -1951,7 +1979,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (row) {
                         row.style.transition = 'background-color 0.6s ease';
                         row.style.backgroundColor = '#e6ffed';
-                        setTimeout(()=>{ row.style.backgroundColor = ''; }, 800);
+                        setTimeout(() => { row.style.backgroundColor = ''; }, 800);
                     }
                     fetchProjectDetails(currentProject._id); // Refresh tasks
                     alert('Task marked as completed!');
@@ -1962,7 +1990,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
                 alert('Server error');
             }
-        } 
+        }
         // Suggest Assignee Button
         else if (e.target.closest('.suggest-assignee-btn')) {
             const taskId = e.target.closest('.suggest-assignee-btn').dataset.taskId;
@@ -1994,7 +2022,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(err);
                 alert('Server error during AI assignment suggestion');
             }
-        } 
+        }
         // Assign Task Button
         else if (e.target.closest('.assign-task-btn')) {
             const taskId = e.target.closest('.assign-task-btn').dataset.taskId;
@@ -2107,14 +2135,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Then open the project for monitoring
                 await fetchProjectDetails(projectId);
                 closeModal('faculty-add-project-modal');
-                
+
                 // Show success message
                 facultyAddProjectError.textContent = 'Successfully assigned to project!';
                 facultyAddProjectError.style.color = 'green';
-                
+
                 // Refresh dashboard to show the newly assigned project
                 await fetchDashboardData();
-                
+
                 // Clear success message after 3 seconds
                 setTimeout(() => {
                     facultyAddProjectError.textContent = '';
@@ -2175,6 +2203,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Chat functionality --- //
     // Fetch and display chat messages
     async function fetchAndDisplayChatMessages(projectId) {
+        if (socket) {
+            socket.emit('join_project', projectId);
+        }
         const token = getAuthToken();
         if (!token) return;
 
@@ -2231,7 +2262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (res.ok) {
                 chatMessageInput.value = ''; // Clear input
-                fetchAndDisplayChatMessages(currentProject._id); // Refresh messages
+                // Socket will handle incoming message rendering instantly
             } else {
                 const errorData = await res.json();
                 alert(errorData.msg || 'Failed to send message.');

@@ -1,6 +1,6 @@
 :root {
-    --primary-color: #0078d4; /* Microsoft Teams blue */
-    --secondary-color: #6264a7; /* Teams purple */
+    --primary-color: #ff9900; /* Microsoft Teams blue */
+    --secondary-color: #ffb700; /* Teams purple */
     --accent-color: #28a745; /* Success green */
     --danger-color: #dc3545; /* Danger red */
     --text-color: #333333;
@@ -230,8 +230,8 @@ textarea {
 }
 
 .primary-btn:hover {
-    background-color: darken(var(--primary-color), 10%);
-    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.3);
+    filter: brightness(0.9);
+    box-shadow: 0 2px 8px rgba(255, 153, 0, 0.3);
 }
 
 .secondary-btn {
@@ -251,7 +251,7 @@ textarea {
 }
 
 .success-btn:hover {
-    background-color: darken(var(--accent-color), 10%);
+    filter: brightness(0.9);
 }
 
 .danger-btn {
@@ -260,7 +260,7 @@ textarea {
 }
 
 .danger-btn:hover {
-    background-color: darken(var(--danger-color), 10%);
+    filter: brightness(0.9);
 }
 
 .flat-btn {
@@ -271,7 +271,7 @@ textarea {
 }
 
 .flat-btn:hover {
-    background-color: rgba(0, 120, 212, 0.1);
+    background-color: rgba(255, 153, 0, 0.1);
 }
 
 /* Error and Status Messages */
@@ -313,7 +313,7 @@ textarea {
 .item-list li.project-card:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-    border-color: rgba(0, 120, 212, 0.35);
+    border-color: rgba(255, 153, 0, 0.35);
 }
 
 .item-list li span {
@@ -364,7 +364,7 @@ textarea {
 }
 .status-badge.pending { background: rgba(255, 193, 7, 0.18); color: #9a6a00; }
 .status-badge.completed { background: rgba(40, 167, 69, 0.18); color: #1f7a38; }
-.status-badge.in\_progress { background: rgba(0, 123, 255, 0.15); color: #0052a3; }
+.status-badge.in\_progress { background: rgba(255, 153, 0, 0.15); color: #0052a3; }
 
 /* Tiny flat utility buttons (e.g., copy) */
 .tiny-btn {
@@ -434,13 +434,13 @@ textarea {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 999px;
-    background: rgba(0, 120, 212, 0.1);
+    background: rgba(255, 153, 0, 0.1);
     color: var(--primary-color);
     font-weight: 600;
 }
 
 .badge.info {
-    background: rgba(98, 100, 167, 0.12);
+    background: rgba(255, 183, 0, 0.12);
     color: var(--secondary-color);
 }
 
@@ -687,8 +687,8 @@ textarea {
 }
 
 .faculty-project-item:hover {
-    border-color: #007bff;
-    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+    border-color: #ff9900;
+    box-shadow: 0 2px 8px rgba(255, 153, 0, 0.1);
     transform: translateY(-1px);
 }
 
