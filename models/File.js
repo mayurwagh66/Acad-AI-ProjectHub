@@ -33,6 +33,17 @@ const FileSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  storageProvider: {
+    type: String,
+    enum: ['local', 'nextcloud'],
+    default: 'local',
+  },
+  nextcloudPath: {
+    type: String,
+  },
+  nextcloudUrl: {
+    type: String,
+  },
 });
 
 module.exports = mongoose.model('File', FileSchema);

@@ -1,0 +1,89 @@
+services:
+  # ----------------------------------------------------
+  # 1. Nextcloud Database (MariaDB)
+  # ----------------------------------------------------
+  nextcloud-db:
+    image: mariadb:10.11
+    container_name: nextcloud_db
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED --log-bin-trust-function-creators=1
+    volumes:
+      - nextcloud_db_data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${NEXTCLOUD_MYSQL_ROOT_PASSWORD:-nextcloud_root_secret}
+      - MYSQL_PASSWORD=${NEXTCLOUD_MYSQL_PASSWORD:-nextcloud_db_secret}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+    networks:
+      - acad_net
+
+  # ----------------------------------------------------
+  # 2. Nextcloud Application (Accessible on http://localhost:8080)
+  # ----------------------------------------------------
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud_app
+    restart: always
+    ports:
+      - "8088:80"
+    environment:
+      - MYSQL_HOST=nextcloud-db
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=${NEXTCLOUD_MYSQL_PASSWORD:-nextcloud_db_secret}
+    volumes:
+      - nextcloud_data:/var/www/html
+    depends_on:
+      - nextcloud-db
+    networks:
+      - acad_net
+
+  # ----------------------------------------------------
+  # 3. Acad-AI Node.js App (Accessible on http://localhost:5000)
+  # ----------------------------------------------------
+  acad-ai:
+    build: .
+    container_name: acad_ai_app
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGO_URI=mongodb://mongo:27017/acad_ai
+      - JWT_SECRET=${JWT_SECRET:-acad_ai_secret_change_in_production}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - NEXTCLOUD_URL=http://nextcloud:80
+      - NEXTCLOUD_USER=${NEXTCLOUD_USER:-admin}
+      - NEXTCLOUD_PASSWORD=${NEXTCLOUD_PASSWORD:-admin_password}
+      - NEXTCLOUD_UPLOAD_DIR=${NEXTCLOUD_UPLOAD_DIR:-acad_ai_uploads}
+    volumes:
+      - acad_uploads:/usr/src/app/uploads
+    depends_on:
+      - mongo
+      - nextcloud
+    networks:
+      - acad_net
+
+  # ----------------------------------------------------
+  # 4. Acad-AI Database (MongoDB)
+  # ----------------------------------------------------
+  mongo:
+    image: mongo:6.0
+    container_name: acad_ai_mongo
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - acad_net
+
+volumes:
+  nextcloud_db_data:
+  nextcloud_data:
+  mongo_data:
+  acad_uploads:
+
+networks:
+  acad_net:
+    driver: bridge

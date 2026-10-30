@@ -9,3 +9,9 @@ uploads/
 dist/
 build/
 .next/
+
+# Office files
+*.pptx
+*.docx
+*.xlsx
+~$*
