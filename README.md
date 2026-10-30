@@ -23,6 +23,10 @@ The platform leverages **Google's Gemini AI** to provide intelligent task planni
 - 👁️ **Lack of Faculty Oversight** — Real-time project monitoring and evaluation tools for faculty
 - 📄 **Manual Progress Reporting** — Automated PDF report generation with charts and insights
 - 🧠 **Inefficient Planning** — AI-powered project planning with itinerary-style guidance
+<img width="1491" height="762" alt="image" src="https://github.com/user-attachments/assets/e474716f-9ba5-4a97-a506-e248cbd98cd5" />
+<img width="941" height="642" alt="image" src="https://github.com/user-attachments/assets/85006672-bb6e-4436-9a3e-c3a63827ae95" />
+<img width="1014" height="599" alt="image" src="https://github.com/user-attachments/assets/82f70949-c4a2-4415-8864-224685a01a2f" />
+
 
 ---
 
